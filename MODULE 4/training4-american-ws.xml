@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="5dad181c-c168-4f90-88ea-2ba0ce3eeb04" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="60822c97-2337-498d-99ca-ed3a0f2d99c8" >
+		<db:my-sql-connection host="mudb.learn.mulesoft.com" port="3306" user="mule" password="mule" database="training" />
+	</db:config>
+	<flow name="training4-american-wsFlow" doc:id="bbc72f48-e25a-4945-a252-cd4525df2932" >
+		<http:listener doc:name="Listener" doc:id="f9effec8-3ae2-47d4-b95e-733e42b9375b" config-ref="HTTP_Listener_config" path="/flights" allowedMethods="GET"/>
+		<db:select doc:name="Select" doc:id="4a5c3985-b2d5-442f-9997-249583a3502b" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT * FROM american]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="d75fbd62-c5c9-466d-aac9-668e5420ae84" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	ID: payload01.ID,
+	code: (payload01.code1 default "") ++ (payload01.code2 default ""),
+	price: payload01.price default 0,
+	departureDate: payload01.takeOffDate as String default "",
+	origin: payload01.fromAirport default "",
+	destination: payload01.toAirport default "",
+	emptySeats: payload01.seatsAvailable default 0,
+	plane: {
+		"type": payload01.planeType default "",
+		totalSeats: payload01.totalSeats default 0
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="/flights" doc:id="3a7a0734-605d-4ef5-a0a5-c6e296f04f94" >
+		<http:listener doc:name="Listener" doc:id="76b3a98f-d603-47d5-b2c7-3c5fd977beaf" config-ref="HTTP_Listener_config" path="/flights" allowedMethods="POST"/>
+		<set-payload value='#[{"message":"Flight not added"}]' doc:name="Set Payload" doc:id="f8e0ec63-9e03-4fd0-bebe-32ca718f2c7f" />
+	</flow>
+	<flow name="getFlightsByIId" doc:id="1d8b9343-e2e1-417d-b763-f94514428c33" >
+		<http:listener doc:name="Copy_of_Listener" doc:id="0a02a52e-45eb-4baa-aad3-d9ff4412568d" config-ref="HTTP_Listener_config" path="/flights/{ID}" allowedMethods="GET" />
+		<db:select doc:name="Copy_of_Select" doc:id="af8f3751-3e9a-492e-8be6-561d84686379" config-ref="Database_Config" >
+			<db:sql ><![CDATA[SELECT * FROM american WHERE ID= :ID]]></db:sql>
+			<db:input-parameters ><![CDATA[{'ID': attributes.uriParams.ID}]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Copy_of_Transform Message" doc:id="5265269f-e9e1-4e8e-82ac-0aab85c768ec" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	ID: payload01.ID,
+	code: (payload01.code1 default "") ++ (payload01.code2 default ""),
+	price: payload01.price default 0,
+	departureDate: payload01.takeOffDate as String default "",
+	origin: payload01.fromAirport default "",
+	destination: payload01.toAirport default "",
+	emptySeats: payload01.seatsAvailable default 0,
+	plane: {
+		"type": payload01.planeType default "",
+		totalSeats: payload01.totalSeats default 0
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
